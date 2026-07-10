@@ -3,3 +3,10 @@ dist/
 .env
 *.log
 .DS_Store
+
+# local test artifacts
+*.json
+!package.json
+!tsconfig.json
+!service-draft.json
+

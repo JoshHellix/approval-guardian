@@ -1,1 +1,0 @@
-﻿{"chain":"ethereum","wallet":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","safetyScore":81,"verdict":"AT_RISK","totalApprovals":1,"unlimitedApprovals":1,"dangerousApprovals":0,"upgrade":{"endpoint":"/v1/approval-scan","price":"0.01 USDT","paymentStandard":"x402","note":"Paid scan returns the full per-approval risk breakdown + evidence."}}
