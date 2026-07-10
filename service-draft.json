@@ -1,0 +1,9 @@
+[
+  {
+    "serviceName": "Approval Scan",
+    "serviceDescription": "Pay-per-call wallet approval-exposure audit: scans ERC-20 approvals for unlimited allowances, unverified spenders, and flagged contracts; returns a 0-100 safety score with SAFE/REVIEW/AT_RISK/CRITICAL verdict and per-approval evidence.",
+    "serviceType": "A2MCP",
+    "fee": "10000",
+    "endpoint": "https://approval-guardian.onrender.com/v1/approval-scan"
+  }
+]

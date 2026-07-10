@@ -1,15 +1,15 @@
 /**
  * Registration helper for the OKX.AI A2MCP ASP "Approval Guardian".
  *
- * The documented onboarding flow uses the Onchain OS CLI (installed via
- * `npx skills add okx/onchainos-skills --yes -g`). This script shells out to
- * that CLI so registration is reproducible and version-controlled.
+ * The current Onchain OS CLI (v4.2.2) flow is:
+ *   1. onchainos wallet login <email>   (then `onchainos wallet verify <otp>`)
+ *   2. onchainos agent upload --file <avatar.png>   (returns a CDN URL)
+ *   3. onchainos agent create --role asp --name ... --description ... --picture <url> --service <JSON>
+ *   4. onchainos agent activate --agent-id <id> --preferred-language en-US
  *
- * Prereqs (run once, interactively):
- *   1. npx skills add okx/onchainos-skills --yes -g
- *   2. Log in to Agentic Wallet:  onchainos wallet login Josh25white@gmail.com
- *
- * Then:  npm run register
+ * Because the --service JSON must be passed as a single argv element (no shell
+ * word-splitting), the actual create call is done by scripts/do-register.cjs.
+ * This TS file documents the flow and is kept for reference.
  *
  * NOTE: PAY_TO_ADDRESS in .env must be the 0x... EVM form of your X Layer
  * Agentic Wallet, NOT the XKO... branded format. x402 cannot use XKO prefixes.
@@ -17,27 +17,18 @@
  */
 import { execSync } from "node:child_process";
 
-const SERVICE_NAME = "Approval Guardian";
-// PAY_TO must match the X Layer address of the logged-in Agentic Wallet.
-const SERVICE_DESC =
-    "Pay-per-call wallet approval-exposure audit: scans ERC-20 approvals for unlimited allowances, " +
-    "unverified spenders, and flagged contracts; returns a 0-100 safety score with SAFE/REVIEW/AT_RISK/CRITICAL verdict.";
-const PUBLIC_URL = process.env.PUBLIC_URL ?? "http://localhost:3000";
+const PUBLIC_URL = process.env.PUBLIC_URL ?? "https://approval-guardian.onrender.com";
 
 function run(cmd: string) {
     console.log(`$ ${cmd}`);
     execSync(cmd, { stdio: "inherit" });
 }
 
-// Register as A2MCP ASP. The CLI reads service metadata from the agent card.
-run(
-    `onchainos agent register-a2mcp ` +
-    `--name "${SERVICE_NAME}" ` +
-    `--description "${SERVICE_DESC}" ` +
-    `--endpoint "${PUBLIC_URL}/v1/approval-scan" ` +
-    `--agent-card "${PUBLIC_URL}/.well-known/agent.json" ` +
-    `--price-usdc 0.01`
-);
+// 1) Upload avatar (replace path with your logo), capture the returned URL.
+// 2) Create the agent (delegated to do-register.cjs to avoid shell quoting issues).
+run(`node scripts/do-register.cjs`);
 
-// Submit for marketplace listing (24h review per docs).
-run(`onchainos agent set-public`);
+// 3) Activate / submit for marketplace review (replace 5003 with the new id).
+run(`onchainos agent activate --agent-id 5003 --preferred-language en-US`);
+
+console.log(`\nRegistered Approval Guardian. Endpoint: ${PUBLIC_URL}/v1/approval-scan`);
