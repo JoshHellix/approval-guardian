@@ -4,9 +4,10 @@ dist/
 *.log
 .DS_Store
 
-# local test artifacts
+# local test artifacts (but keep config + lockfile)
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 !service-draft.json
 
