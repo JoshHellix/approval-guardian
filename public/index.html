@@ -1,196 +1,519 @@
 <!doctype html>
 <html lang="en" class="dark">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Approval Guardian — Wallet Approval Auditor</title>
-<meta name="description" content="Pay-per-call wallet approval-exposure auditor. Scans ERC-20 approvals for unlimited allowances, unverified spenders, and flagged contracts. A2MCP agent on OKX.AI." />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    darkMode: 'class',
-    theme: {
-      extend: {
-        fontFamily: {
-          display: ['Space Grotesk', 'sans-serif'],
-          sans: ['Inter', 'sans-serif'],
-          mono: ['JetBrains Mono', 'monospace'],
-        },
-        colors: {
-          ink: { 950:'#05070f', 900:'#080b16', 850:'#0b1020', 800:'#0f1530', 700:'#141d3a' },
-          cyan: { DEFAULT:'#22d3ee', soft:'#67e8f9' },
-          mint: { DEFAULT:'#34d399' },
-          line: '#1d2a4d',
-        },
-        boxShadow: { glow:'0 0 40px rgba(34,211,238,.25)', 'glow-lg':'0 0 80px rgba(34,211,238,.35)' },
-      }
-    }
-  }
-</script>
-<style>
-  html{scroll-behavior:smooth}
-  body{background:#05070f;color:#e8eefc;font-family:'Inter',sans-serif;overflow-x:hidden}
-  .font-display{font-family:'Space Grotesk',sans-serif}
-  .font-mono{font-family:'JetBrains Mono',monospace}
-  .aurora{position:fixed;inset:0;z-index:-2;overflow:hidden}
-  .aurora::before,.aurora::after{content:"";position:absolute;width:60vw;height:60vw;border-radius:50%;filter:blur(120px);opacity:.35;animation:float 18s ease-in-out infinite}
-  .aurora::before{background:radial-gradient(circle,#22d3ee,transparent 60%);top:-10%;left:-10%}
-  .aurora::after{background:radial-gradient(circle,#34d399,transparent 60%);bottom:-15%;right:-10%;animation-delay:-9s}
-  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(8%,6%) scale(1.15)}}
-  .grid-overlay{position:fixed;inset:0;z-index:-1;background-image:linear-gradient(rgba(34,211,238,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.04) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%)}
-  #particles{position:fixed;inset:0;z-index:-1;opacity:.5}
-  .glass{background:rgba(15,21,48,.55);backdrop-filter:blur(14px);border:1px solid rgba(34,211,238,.14)}
-  .grad-text{background:linear-gradient(120deg,#22d3ee,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .btn-primary{background:linear-gradient(135deg,#22d3ee,#34d399);color:#04121a;transition:.25s;box-shadow:0 8px 30px rgba(34,211,238,.3)}
-  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 14px 44px rgba(34,211,238,.45)}
-  .btn-ghost{border:1px solid rgba(34,211,238,.3);color:#e8eefc;transition:.25s}
-  .btn-ghost:hover{border-color:#22d3ee;color:#22d3ee;background:rgba(34,211,238,.06)}
-  .card{background:linear-gradient(180deg,rgba(15,21,48,.7),rgba(8,11,22,.7));border:1px solid rgba(34,211,238,.12);transition:.3s}
-  .card:hover{border-color:rgba(34,211,238,.4);transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.4)}
-  .gauge{--v:0;width:130px;height:130px;border-radius:50%;background:conic-gradient(#22d3ee calc(var(--v)*1%),#1d2a4d 0);display:grid;place-items:center;position:relative;transition:--v 1s ease}
-  .gauge::after{content:"";position:absolute;inset:11px;border-radius:50%;background:#080b16}
-  .gauge b{position:relative;font-size:38px;font-weight:700;font-family:'JetBrains Mono',monospace}
-  .v-SAFE{color:#34d399}.v-REVIEW{color:#fbbf24}.v-AT_RISK{color:#fbbf24}.v-CRITICAL{color:#fb7185}
-  .appr{border:1px solid rgba(34,211,238,.12);border-radius:12px;padding:14px 16px;background:rgba(15,21,48,.5);display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:14px;animation:slideIn .4s ease both}
-  @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
-  .unl{color:#fbbf24;font-weight:700}
-  .nav-link{position:relative}
-  .nav-link::after{content:"";position:absolute;left:0;bottom:-4px;width:0;height:2px;background:#22d3ee;transition:.25s}
-  .nav-link:hover::after{width:100%}
-  ::selection{background:rgba(34,211,238,.3);color:#fff}
-</style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Approval Guardian — Wallet Approval Auditor</title>
+    <meta name="description"
+        content="Pay-per-call wallet approval-exposure auditor. Scans ERC-20 approvals for unlimited allowances, unverified spenders, and flagged contracts. A2MCP agent on OKX.AI." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        ink: { 950: '#05070f', 900: '#080b16', 850: '#0b1020', 800: '#0f1530', 700: '#141d3a' },
+                        cyan: { DEFAULT: '#22d3ee', soft: '#67e8f9' },
+                        mint: { DEFAULT: '#34d399' },
+                        line: '#1d2a4d',
+                    },
+                    boxShadow: { glow: '0 0 40px rgba(34,211,238,.25)', 'glow-lg': '0 0 80px rgba(34,211,238,.35)' },
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            background: #05070f;
+            color: #e8eefc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden
+        }
+
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        .aurora {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden
+        }
+
+        .aurora::before,
+        .aurora::after {
+            content: "";
+            position: absolute;
+            width: 60vw;
+            height: 60vw;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .35;
+            animation: float 18s ease-in-out infinite
+        }
+
+        .aurora::before {
+            background: radial-gradient(circle, #22d3ee, transparent 60%);
+            top: -10%;
+            left: -10%
+        }
+
+        .aurora::after {
+            background: radial-gradient(circle, #34d399, transparent 60%);
+            bottom: -15%;
+            right: -10%;
+            animation-delay: -9s
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1)
+            }
+
+            50% {
+                transform: translate(8%, 6%) scale(1.15)
+            }
+        }
+
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image: linear-gradient(rgba(34, 211, 238, .04) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 211, 238, .04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)
+        }
+
+        #particles {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: .5
+        }
+
+        .bg-texture {
+            position: fixed;
+            inset: 0;
+            z-index: -3;
+            background: url('assets/bg-abstract.jpg') center/cover no-repeat;
+            opacity: .14
+        }
+
+        .hero-deco {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background: url('assets/shield.jpg') right -4% center / 48% no-repeat;
+            opacity: .22;
+            mask-image: radial-gradient(circle at 82% 48%, #000 25%, transparent 72%);
+            -webkit-mask-image: radial-gradient(circle at 82% 48%, #000 25%, transparent 72%);
+            pointer-events: none
+        }
+
+        .why-deco {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background: url('assets/cyber-lock.jpg') right 2% center / 40% no-repeat;
+            opacity: .16;
+            mask-image: radial-gradient(circle at 88% 50%, #000 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(circle at 88% 50%, #000 20%, transparent 70%);
+            pointer-events: none
+        }
+
+        .relative-z {
+            position: relative;
+            z-index: 1
+        }
+
+        .glass {
+            background: rgba(15, 21, 48, .55);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(34, 211, 238, .14)
+        }
+
+        .grad-text {
+            background: linear-gradient(120deg, #22d3ee, #34d399);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #22d3ee, #34d399);
+            color: #04121a;
+            transition: .25s;
+            box-shadow: 0 8px 30px rgba(34, 211, 238, .3)
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 44px rgba(34, 211, 238, .45)
+        }
+
+        .btn-ghost {
+            border: 1px solid rgba(34, 211, 238, .3);
+            color: #e8eefc;
+            transition: .25s
+        }
+
+        .btn-ghost:hover {
+            border-color: #22d3ee;
+            color: #22d3ee;
+            background: rgba(34, 211, 238, .06)
+        }
+
+        .card {
+            background: linear-gradient(180deg, rgba(15, 21, 48, .7), rgba(8, 11, 22, .7));
+            border: 1px solid rgba(34, 211, 238, .12);
+            transition: .3s
+        }
+
+        .card:hover {
+            border-color: rgba(34, 211, 238, .4);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .4)
+        }
+
+        .gauge {
+            --v: 0;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: conic-gradient(#22d3ee calc(var(--v)*1%), #1d2a4d 0);
+            display: grid;
+            place-items: center;
+            position: relative;
+            transition: --v 1s ease
+        }
+
+        .gauge::after {
+            content: "";
+            position: absolute;
+            inset: 11px;
+            border-radius: 50%;
+            background: #080b16
+        }
+
+        .gauge b {
+            position: relative;
+            font-size: 38px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        .v-SAFE {
+            color: #34d399
+        }
+
+        .v-REVIEW {
+            color: #fbbf24
+        }
+
+        .v-AT_RISK {
+            color: #fbbf24
+        }
+
+        .v-CRITICAL {
+            color: #fb7185
+        }
+
+        .appr {
+            border: 1px solid rgba(34, 211, 238, .12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            background: rgba(15, 21, 48, .5);
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            font-size: 14px;
+            animation: slideIn .4s ease both
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-12px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .unl {
+            color: #fbbf24;
+            font-weight: 700
+        }
+
+        .nav-link {
+            position: relative
+        }
+
+        .nav-link::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -4px;
+            width: 0;
+            height: 2px;
+            background: #22d3ee;
+            transition: .25s
+        }
+
+        .nav-link:hover::after {
+            width: 100%
+        }
+
+        ::selection {
+            background: rgba(34, 211, 238, .3);
+            color: #fff
+        }
+    </style>
 </head>
+
 <body class="font-sans">
-<div class="aurora"></div>
-<div class="grid-overlay"></div>
-<div id="particles"></div>
+    <div class="bg-texture"></div>
+    <div class="aurora"></div>
+    <div class="grid-overlay"></div>
+    <div id="particles"></div>
 
-<nav class="fixed top-0 inset-x-0 z-50 glass border-b border-line/60">
-  <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-    <a href="#" class="flex items-center gap-3 font-display font-bold text-lg">
-      <span class="w-9 h-9 rounded-xl grid place-items-center bg-gradient-to-br from-cyan to-mint text-ink-950 font-bold text-base shadow-glow">AG</span>
-      Approval Guardian
-    </a>
-    <div class="hidden md:flex items-center gap-8 text-sm text-slate-300">
-      <a href="#demo" class="nav-link hover:text-white">Live Scan</a>
-      <a href="#why" class="nav-link hover:text-white">Why</a>
-      <a href="#how" class="nav-link hover:text-white">How</a>
-      <a href="#api" class="nav-link hover:text-white">API</a>
-      <a href="#suite" class="nav-link hover:text-white">The Suite</a>
-    </div>
-    <span class="text-xs font-semibold text-cyan border border-cyan/30 px-3 py-1.5 rounded-full bg-cyan/10">A2MCP · OKX.AI</span>
-  </div>
-</nav>
-
-<header class="relative pt-36 pb-20 px-6">
-  <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-14 items-center">
-    <div data-aos="fade-up">
-      <span class="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-cyan border border-cyan/30 bg-cyan/10 px-3.5 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-cyan animate-pulse"></span> Wallet Approval Auditor · x402 pay-per-call
-      </span>
-      <h1 class="font-display font-bold text-5xl lg:text-6xl leading-[1.05] mt-6 tracking-tight">
-        Is your wallet's <span class="grad-text">approval exposure</span> safe right now?
-      </h1>
-      <p class="text-slate-300 text-lg mt-6 max-w-xl leading-relaxed">
-        Approval Guardian scans a wallet's ERC-20 approvals for <b class="text-white">unlimited allowances</b>, unverified spenders, and flagged contracts — returning a 0–100 safety score with a structured verdict and per-approval evidence. Built for copilots and wallets to call on every session connect.
-      </p>
-      <div class="flex flex-wrap gap-4 mt-8">
-        <a href="#demo" class="btn-primary px-6 py-3.5 rounded-xl font-semibold inline-flex items-center gap-2"><i class="fa-solid fa-play"></i> Try a live scan</a>
-        <a href="#api" class="btn-ghost px-6 py-3.5 rounded-xl font-semibold inline-flex items-center gap-2"><i class="fa-solid fa-code"></i> View API</a>
-      </div>
-      <div class="flex items-center gap-6 mt-10 text-sm text-slate-400">
-        <div><b class="text-white font-mono text-xl">$0.01</b><br>per call (USDT)</div>
-        <div class="w-px h-8 bg-line"></div>
-        <div><b class="text-white font-mono text-xl">6</b><br>chains</div>
-        <div class="w-px h-8 bg-line"></div>
-        <div><b class="text-white font-mono text-xl">x402</b><br>X Layer</div>
-      </div>
-    </div>
-
-    <div class="glass rounded-2xl p-6 shadow-glow-lg" data-aos="fade-left" data-aos-delay="150">
-      <div class="flex items-center justify-between mb-4">
-        <span class="text-sm text-slate-400 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan shadow-glow"></span> Live preview — free, no wallet connect</span>
-        <span id="demo-status" class="font-mono text-xs text-cyan">ready</span>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <input id="wallet" class="font-mono text-sm bg-ink-950 border border-line rounded-xl px-4 py-3.5 flex-1 min-w-[240px] text-white outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition" placeholder="0x… wallet address" value="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" />
-        <select id="chain" class="font-mono text-sm bg-ink-950 border border-line rounded-xl px-4 py-3.5 text-white outline-none focus:border-cyan transition">
-          <option value="ethereum">Ethereum</option><option value="bsc">BNB Chain</option><option value="base">Base</option><option value="arbitrum">Arbitrum</option><option value="polygon">Polygon</option><option value="xlayer">X Layer</option>
-        </select>
-      </div>
-      <div class="text-xs text-slate-500 mt-3">Try: <a href="#" data-w="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" class="text-cyan hover:underline">vitalik.eth</a> · <a href="#" data-w="0x28C6c06298d514Db089934071355E5743bf21d60" class="text-cyan hover:underline">punk6529</a> · <a href="#" data-w="0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" class="text-cyan hover:underline">beeple</a></div>
-      <button id="scan" class="btn-primary w-full mt-4 px-6 py-3.5 rounded-xl font-semibold"><i class="fa-solid fa-shield-halved"></i> Scan wallet</button>
-
-      <div id="result" class="mt-5 hidden">
-        <div class="flex items-center gap-6">
-          <div class="gauge" id="gauge"><b id="score">–</b></div>
-          <div>
-            <div class="verdict font-display font-bold text-2xl" id="verdict">–</div>
-            <div class="font-mono text-sm text-slate-400 mt-1" id="summary"></div>
-          </div>
+    <nav class="fixed top-0 inset-x-0 z-50 glass border-b border-line/60">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 font-display font-bold text-lg">
+                <span
+                    class="w-9 h-9 rounded-xl grid place-items-center bg-gradient-to-br from-cyan to-mint text-ink-950 font-bold text-base shadow-glow">AG</span>
+                Approval Guardian
+            </a>
+            <div class="hidden md:flex items-center gap-8 text-sm text-slate-300">
+                <a href="#demo" class="nav-link hover:text-white">Live Scan</a>
+                <a href="#why" class="nav-link hover:text-white">Why</a>
+                <a href="#how" class="nav-link hover:text-white">How</a>
+                <a href="#api" class="nav-link hover:text-white">API</a>
+                <a href="#suite" class="nav-link hover:text-white">The Suite</a>
+            </div>
+            <span
+                class="text-xs font-semibold text-cyan border border-cyan/30 px-3 py-1.5 rounded-full bg-cyan/10">A2MCP
+                · OKX.AI</span>
         </div>
-        <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-line">
-          <div><span class="block text-xs uppercase tracking-wide text-slate-500">Total</span><b id="m-total" class="font-mono text-xl">–</b></div>
-          <div><span class="block text-xs uppercase tracking-wide text-slate-500">Unlimited</span><b id="m-unl" class="font-mono text-xl text-amber-400">–</b></div>
-          <div><span class="block text-xs uppercase tracking-wide text-slate-500">Dangerous</span><b id="m-danger" class="font-mono text-xl text-rose-400">–</b></div>
+    </nav>
+
+    <header class="relative pt-36 pb-20 px-6">
+        <div class="hero-deco"></div>
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-14 items-center relative-z">
+            <div data-aos="fade-up">
+                <span
+                    class="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-cyan border border-cyan/30 bg-cyan/10 px-3.5 py-1.5 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-cyan animate-pulse"></span> Wallet Approval Auditor · x402
+                    pay-per-call
+                </span>
+                <h1 class="font-display font-bold text-5xl lg:text-6xl leading-[1.05] mt-6 tracking-tight">
+                    Is your wallet's <span class="grad-text">approval exposure</span> safe right now?
+                </h1>
+                <p class="text-slate-300 text-lg mt-6 max-w-xl leading-relaxed">
+                    Approval Guardian scans a wallet's ERC-20 approvals for <b class="text-white">unlimited
+                        allowances</b>, unverified spenders, and flagged contracts — returning a 0–100 safety score with
+                    a structured verdict and per-approval evidence. Built for copilots and wallets to call on every
+                    session connect.
+                </p>
+                <div class="flex flex-wrap gap-4 mt-8">
+                    <a href="#demo"
+                        class="btn-primary px-6 py-3.5 rounded-xl font-semibold inline-flex items-center gap-2"><i
+                            class="fa-solid fa-play"></i> Try a live scan</a>
+                    <a href="#api"
+                        class="btn-ghost px-6 py-3.5 rounded-xl font-semibold inline-flex items-center gap-2"><i
+                            class="fa-solid fa-code"></i> View API</a>
+                </div>
+                <div class="flex items-center gap-6 mt-10 text-sm text-slate-400">
+                    <div><b class="text-white font-mono text-xl">$0.01</b><br>per call (USDT)</div>
+                    <div class="w-px h-8 bg-line"></div>
+                    <div><b class="text-white font-mono text-xl">6</b><br>chains</div>
+                    <div class="w-px h-8 bg-line"></div>
+                    <div><b class="text-white font-mono text-xl">x402</b><br>X Layer</div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 shadow-glow-lg" data-aos="fade-left" data-aos-delay="150">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm text-slate-400 flex items-center gap-2"><span
+                            class="w-2.5 h-2.5 rounded-full bg-cyan shadow-glow"></span> Live preview — free, no wallet
+                        connect</span>
+                    <span id="demo-status" class="font-mono text-xs text-cyan">ready</span>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <input id="wallet"
+                        class="font-mono text-sm bg-ink-950 border border-line rounded-xl px-4 py-3.5 flex-1 min-w-[240px] text-white outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition"
+                        placeholder="0x… wallet address" value="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" />
+                    <select id="chain"
+                        class="font-mono text-sm bg-ink-950 border border-line rounded-xl px-4 py-3.5 text-white outline-none focus:border-cyan transition">
+                        <option value="ethereum">Ethereum</option>
+                        <option value="bsc">BNB Chain</option>
+                        <option value="base">Base</option>
+                        <option value="arbitrum">Arbitrum</option>
+                        <option value="polygon">Polygon</option>
+                        <option value="xlayer">X Layer</option>
+                    </select>
+                </div>
+                <div class="text-xs text-slate-500 mt-3">Try: <a href="#"
+                        data-w="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+                        class="text-cyan hover:underline">vitalik.eth</a> · <a href="#"
+                        data-w="0x28C6c06298d514Db089934071355E5743bf21d60"
+                        class="text-cyan hover:underline">punk6529</a> · <a href="#"
+                        data-w="0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" class="text-cyan hover:underline">beeple</a>
+                </div>
+                <button id="scan" class="btn-primary w-full mt-4 px-6 py-3.5 rounded-xl font-semibold"><i
+                        class="fa-solid fa-shield-halved"></i> Scan wallet</button>
+
+                <div id="result" class="mt-5 hidden">
+                    <div class="flex items-center gap-6">
+                        <div class="gauge" id="gauge"><b id="score">–</b></div>
+                        <div>
+                            <div class="verdict font-display font-bold text-2xl" id="verdict">–</div>
+                            <div class="font-mono text-sm text-slate-400 mt-1" id="summary"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-line">
+                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Total</span><b
+                                id="m-total" class="font-mono text-xl">–</b></div>
+                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Unlimited</span><b
+                                id="m-unl" class="font-mono text-xl text-amber-400">–</b></div>
+                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Dangerous</span><b
+                                id="m-danger" class="font-mono text-xl text-rose-400">–</b></div>
+                    </div>
+                    <div class="approvals mt-4 grid gap-2.5" id="approvals"></div>
+                </div>
+            </div>
         </div>
-        <div class="approvals mt-4 grid gap-2.5" id="approvals"></div>
-      </div>
-    </div>
-  </div>
-</header>
+    </header>
 
-<section id="why" class="px-6 py-24">
-  <div class="max-w-7xl mx-auto">
-    <div data-aos="fade-up">
-      <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">Why it matters</div>
-      <h2 class="font-display font-bold text-4xl tracking-tight">Every approval is a standing permission to drain you</h2>
-      <p class="text-slate-300 text-lg mt-4 max-w-2xl">When you approve a dApp, you often grant <b class="text-white">unlimited</b> spend rights. If that contract is later exploited or is malicious, it can move every approved token — silently. Approval Guardian is the per-session hygiene check.</p>
-    </div>
-    <div class="grid md:grid-cols-3 gap-6 mt-12">
-      <div class="card rounded-2xl p-7" data-aos="fade-up"><div class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5"><i class="fa-solid fa-unlock-keyhole"></i></div><h3 class="font-display font-semibold text-xl mb-2">Unlimited allowances</h3><p class="text-slate-400 text-sm leading-relaxed">Flags approvals set to the max uint256 — the ones that let a compromised spender take everything.</p></div>
-      <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="100"><div class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5"><i class="fa-solid fa-magnifying-glass"></i></div><h3 class="font-display font-semibold text-xl mb-2">Unverified spenders</h3><p class="text-slate-400 text-sm leading-relaxed">Surfaces approvals to contracts not on the trusted-protocol list so you can review before transacting.</p></div>
-      <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="200"><div class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5"><i class="fa-solid fa-triangle-exclamation"></i></div><h3 class="font-display font-semibold text-xl mb-2">Flagged & malicious</h3><p class="text-slate-400 text-sm leading-relaxed">Cross-checks spenders against a curated list of known-exploited addresses and raises risk to CRITICAL.</p></div>
-    </div>
-  </div>
-</section>
+    <section id="why" class="relative px-6 py-24">
+        <div class="why-deco"></div>
+        <div class="max-w-7xl mx-auto relative-z">
+            <div data-aos="fade-up">
+                <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">Why it matters</div>
+                <h2 class="font-display font-bold text-4xl tracking-tight">Every approval is a standing permission to
+                    drain you</h2>
+                <p class="text-slate-300 text-lg mt-4 max-w-2xl">When you approve a dApp, you often grant <b
+                        class="text-white">unlimited</b> spend rights. If that contract is later exploited or is
+                    malicious, it can move every approved token — silently. Approval Guardian is the per-session hygiene
+                    check.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6 mt-12">
+                <div class="card rounded-2xl p-7" data-aos="fade-up">
+                    <div
+                        class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5">
+                        <i class="fa-solid fa-unlock-keyhole"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-2">Unlimited allowances</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Flags approvals set to the max uint256 — the ones
+                        that let a compromised spender take everything.</p>
+                </div>
+                <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="100">
+                    <div
+                        class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-2">Unverified spenders</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Surfaces approvals to contracts not on the
+                        trusted-protocol list so you can review before transacting.</p>
+                </div>
+                <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="200">
+                    <div
+                        class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl mb-5">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-2">Flagged & malicious</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Cross-checks spenders against a curated list of
+                        known-exploited addresses and raises risk to CRITICAL.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<section id="how" class="px-6 py-24 bg-ink-900/40 border-y border-line/50">
-  <div class="max-w-7xl mx-auto">
-    <div data-aos="fade-up">
-      <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">How it works</div>
-      <h2 class="font-display font-bold text-4xl tracking-tight">One call. Real on-chain evidence.</h2>
-    </div>
-    <div class="grid md:grid-cols-3 gap-6 mt-12">
-      <div class="card rounded-2xl p-7" data-aos="fade-up"><div class="font-mono text-cyan text-sm mb-3">01</div><h4 class="font-display font-semibold text-lg mb-2">Discover tokens</h4><p class="text-slate-400 text-sm">Enumerates the ERC-20 tokens a wallet has actually interacted with via Etherscan's free API.</p></div>
-      <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="100"><div class="font-mono text-cyan text-sm mb-3">02</div><h4 class="font-display font-semibold text-lg mb-2">Read live allowances</h4><p class="text-slate-400 text-sm">Reads the current <code class="font-mono text-cyan">allowance(owner, spender)</code> for each major protocol via RPC — catching dangerous unlimited approvals.</p></div>
-      <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="200"><div class="font-mono text-cyan text-sm mb-3">03</div><h4 class="font-display font-semibold text-lg mb-2">Score & verdict</h4><p class="text-slate-400 text-sm">Computes a 0–100 safety score, assigns SAFE / REVIEW / AT_RISK / CRITICAL, and returns per-approval evidence.</p></div>
-    </div>
-  </div>
-</section>
+    <section id="how" class="px-6 py-24 bg-ink-900/40 border-y border-line/50">
+        <div class="max-w-7xl mx-auto">
+            <div data-aos="fade-up">
+                <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">How it works</div>
+                <h2 class="font-display font-bold text-4xl tracking-tight">One call. Real on-chain evidence.</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6 mt-12">
+                <div class="card rounded-2xl p-7" data-aos="fade-up">
+                    <div class="font-mono text-cyan text-sm mb-3">01</div>
+                    <h4 class="font-display font-semibold text-lg mb-2">Discover tokens</h4>
+                    <p class="text-slate-400 text-sm">Enumerates the ERC-20 tokens a wallet has actually interacted with
+                        via Etherscan's free API.</p>
+                </div>
+                <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="100">
+                    <div class="font-mono text-cyan text-sm mb-3">02</div>
+                    <h4 class="font-display font-semibold text-lg mb-2">Read live allowances</h4>
+                    <p class="text-slate-400 text-sm">Reads the current <code
+                            class="font-mono text-cyan">allowance(owner, spender)</code> for each major protocol via RPC
+                        — catching dangerous unlimited approvals.</p>
+                </div>
+                <div class="card rounded-2xl p-7" data-aos="fade-up" data-aos-delay="200">
+                    <div class="font-mono text-cyan text-sm mb-3">03</div>
+                    <h4 class="font-display font-semibold text-lg mb-2">Score & verdict</h4>
+                    <p class="text-slate-400 text-sm">Computes a 0–100 safety score, assigns SAFE / REVIEW / AT_RISK /
+                        CRITICAL, and returns per-approval evidence.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<section id="api" class="px-6 py-24">
-  <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-    <div data-aos="fade-right">
-      <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">Developer API</div>
-      <h2 class="font-display font-bold text-4xl tracking-tight">Drop-in for any copilot</h2>
-      <p class="text-slate-300 text-lg mt-4">A2MCP service on OKX.AI. Free preview for discovery; paid deep scan at $0.01 USDT on X Layer (x402).</p>
-      <div class="flex gap-4 mt-6">
-        <div class="glass rounded-xl px-5 py-4 flex-1"><div class="text-xs text-slate-500 uppercase">Free</div><div class="font-mono text-cyan">/v1/approval-scan/preview</div></div>
-        <div class="glass rounded-xl px-5 py-4 flex-1"><div class="text-xs text-slate-500 uppercase">Paid</div><div class="font-mono text-cyan">/v1/approval-scan</div></div>
-      </div>
-    </div>
-    <div class="glass rounded-2xl overflow-hidden" data-aos="fade-left">
-      <div class="flex border-b border-line">
-        <button class="api-tab on flex-1 py-3.5 font-mono text-sm text-white border-b-2 border-cyan" data-tab="preview">Free preview</button>
-        <button class="api-tab flex-1 py-3.5 font-mono text-sm text-slate-400 hover:text-white transition" data-tab="paid">Paid scan</button>
-      </div>
-      <pre class="p-5 font-mono text-[13px] leading-relaxed text-slate-300 overflow-x-auto"><code id="api-preview"><span class="text-slate-500"># Free — no payment</span>
+    <section id="api" class="px-6 py-24">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+            <div data-aos="fade-right">
+                <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">Developer API</div>
+                <h2 class="font-display font-bold text-4xl tracking-tight">Drop-in for any copilot</h2>
+                <p class="text-slate-300 text-lg mt-4">A2MCP service on OKX.AI. Free preview for discovery; paid deep
+                    scan at $0.01 USDT on X Layer (x402).</p>
+                <div class="flex gap-4 mt-6">
+                    <div class="glass rounded-xl px-5 py-4 flex-1">
+                        <div class="text-xs text-slate-500 uppercase">Free</div>
+                        <div class="font-mono text-cyan">/v1/approval-scan/preview</div>
+                    </div>
+                    <div class="glass rounded-xl px-5 py-4 flex-1">
+                        <div class="text-xs text-slate-500 uppercase">Paid</div>
+                        <div class="font-mono text-cyan">/v1/approval-scan</div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl overflow-hidden" data-aos="fade-left">
+                <div class="flex border-b border-line">
+                    <button class="api-tab on flex-1 py-3.5 font-mono text-sm text-white border-b-2 border-cyan"
+                        data-tab="preview">Free preview</button>
+                    <button class="api-tab flex-1 py-3.5 font-mono text-sm text-slate-400 hover:text-white transition"
+                        data-tab="paid">Paid scan</button>
+                </div>
+                <pre
+                    class="p-5 font-mono text-[13px] leading-relaxed text-slate-300 overflow-x-auto"><code id="api-preview"><span class="text-slate-500"># Free — no payment</span>
 curl -X POST <span class="text-mint">https://approval-guardian.onrender.com/v1/approval-scan/preview</span> \
   -H <span class="text-mint">'content-type: application/json'</span> \
   -d <span class="text-mint">'{"chain":"ethereum","wallet":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'</span></code>
@@ -198,93 +521,125 @@ curl -X POST <span class="text-mint">https://approval-guardian.onrender.com/v1/a
 curl -X POST <span class="text-mint">https://approval-guardian.onrender.com/v1/approval-scan</span> \
   -H <span class="text-mint">'content-type: application/json'</span> \
   -d <span class="text-mint">'{"chain":"ethereum","wallet":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'</span></code></pre>
-    </div>
-  </div>
-</section>
+            </div>
+        </div>
+    </section>
 
-<section id="suite" class="px-6 py-24 bg-ink-900/40 border-t border-line/50">
-  <div class="max-w-7xl mx-auto">
-    <div data-aos="fade-up">
-      <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">The On-Chain Risk Suite</div>
-      <h2 class="font-display font-bold text-4xl tracking-tight">Two agents. Full coverage.</h2>
-      <p class="text-slate-300 text-lg mt-4 max-w-2xl">Approval Guardian is the post-connect half. Pair it with <b class="text-white">Token Trust Score</b> for the pre-trade half — together they cover the two questions every copilot must answer.</p>
-    </div>
-    <div class="grid md:grid-cols-2 gap-6 mt-12">
-      <div class="card rounded-2xl p-7 flex items-start gap-4" data-aos="fade-up"><div class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl flex-none"><i class="fa-solid fa-shield-halved"></i></div><div><h3 class="font-display font-semibold text-lg">Approval Guardian <span class="text-cyan text-sm">#5003</span></h3><p class="text-slate-400 text-sm mt-1">"Is this wallet's existing approval exposure safe?" — approval hygiene, per session.</p></div></div>
-      <div class="card rounded-2xl p-7 flex items-start gap-4" data-aos="fade-up" data-aos-delay="100"><div class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl flex-none"><i class="fa-solid fa-chart-line"></i></div><div><h3 class="font-display font-semibold text-lg">Token Trust Score <span class="text-cyan text-sm">#4945</span></h3><p class="text-slate-400 text-sm mt-1">"Is this token safe to buy?" — composite trust score before you trade.</p></div></div>
-    </div>
-    <div class="flex flex-wrap gap-3 mt-8">
-      <a href="https://approval-guardian.onrender.com" class="btn-ghost px-5 py-2.5 rounded-full text-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> Approval Guardian site</a>
-      <a href="https://tokenguard-p3pk.onrender.com" class="btn-ghost px-5 py-2.5 rounded-full text-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> Token Trust Score site</a>
-    </div>
-  </div>
-</section>
+    <section id="suite" class="px-6 py-24 bg-ink-900/40 border-t border-line/50">
+        <div class="max-w-7xl mx-auto">
+            <div data-aos="fade-up">
+                <div class="text-xs font-bold tracking-widest uppercase text-cyan mb-3">The On-Chain Risk Suite</div>
+                <h2 class="font-display font-bold text-4xl tracking-tight">Two agents. Full coverage.</h2>
+                <p class="text-slate-300 text-lg mt-4 max-w-2xl">Approval Guardian is the post-connect half. Pair it
+                    with <b class="text-white">Token Trust Score</b> for the pre-trade half — together they cover the
+                    two questions every copilot must answer.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6 mt-12">
+                <div class="card rounded-2xl p-7 flex items-start gap-4" data-aos="fade-up">
+                    <div
+                        class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl flex-none">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-semibold text-lg">Approval Guardian <span
+                                class="text-cyan text-sm">#5003</span></h3>
+                        <p class="text-slate-400 text-sm mt-1">"Is this wallet's existing approval exposure safe?" —
+                            approval hygiene, per session.</p>
+                    </div>
+                </div>
+                <div class="card rounded-2xl p-7 flex items-start gap-4" data-aos="fade-up" data-aos-delay="100">
+                    <div
+                        class="w-12 h-12 rounded-xl grid place-items-center bg-cyan/10 border border-cyan/30 text-cyan text-xl flex-none">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-semibold text-lg">Token Trust Score <span
+                                class="text-cyan text-sm">#4945</span></h3>
+                        <p class="text-slate-400 text-sm mt-1">"Is this token safe to buy?" — composite trust score
+                            before you trade.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-8">
+                <a href="https://approval-guardian.onrender.com" class="btn-ghost px-5 py-2.5 rounded-full text-sm"><i
+                        class="fa-solid fa-arrow-up-right-from-square"></i> Approval Guardian site</a>
+                <a href="https://tokenguard-p3pk.onrender.com" class="btn-ghost px-5 py-2.5 rounded-full text-sm"><i
+                        class="fa-solid fa-arrow-up-right-from-square"></i> Token Trust Score site</a>
+            </div>
+        </div>
+    </section>
 
-<footer class="px-6 py-12 border-t border-line/50 text-sm text-slate-500">
-  <div class="max-w-7xl mx-auto flex flex-wrap justify-between gap-4 items-center">
-    <div class="max-w-xl leading-relaxed">Approval Guardian is an automated on-chain approval aggregator. Not financial advice. Scores reflect public data at call time and may change — verify independently before revoking any approval. Powered by Etherscan + Ankr RPC.</div>
-    <span class="text-xs font-semibold text-cyan border border-cyan/30 px-3 py-1.5 rounded-full bg-cyan/10">x402 · USDT · X Layer</span>
-  </div>
-</footer>
+    <footer class="px-6 py-12 border-t border-line/50 text-sm text-slate-500">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between gap-4 items-center">
+            <div class="max-w-xl leading-relaxed">Approval Guardian is an automated on-chain approval aggregator. Not
+                financial advice. Scores reflect public data at call time and may change — verify independently before
+                revoking any approval. Powered by Etherscan + Ankr RPC.</div>
+            <span class="text-xs font-semibold text-cyan border border-cyan/30 px-3 py-1.5 rounded-full bg-cyan/10">x402
+                · USDT · X Layer</span>
+        </div>
+    </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tsparticles/slim@3.8.1/tsparticles.slim.bundle.min.js"></script>
-<script>
-  AOS.init({duration:700, once:true, offset:80});
-  if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
-  if (window.tsParticles) {
-    tsParticles.load({ id:'particles', options:{
-      fpsLimit:60, detectRetina:true, background:{color:'transparent'},
-      particles:{
-        number:{value:42, density:{enable:true, area:900}},
-        color:{value:['#22d3ee','#34d399']},
-        links:{enable:true, color:'#22d3ee', opacity:.12, distance:140},
-        move:{enable:true, speed:.5, outModes:'out'},
-        size:{value:{min:1,max:2.5}}, opacity:{value:.4}
-      }
-    }});
-  }
-  const $=(s)=>document.querySelector(s);
-  const HOST=location.origin;
-  document.querySelectorAll('[data-w]').forEach(a=>a.onclick=e=>{e.preventDefault();$('#wallet').value=a.dataset.w;});
-  document.querySelectorAll('.api-tab').forEach(b=>b.onclick=()=>{
-    document.querySelectorAll('.api-tab').forEach(x=>{x.classList.remove('on','text-white','border-cyan');x.classList.add('text-slate-400');});
-    b.classList.add('on','text-white','border-cyan'); b.classList.remove('text-slate-400');
-    $('#api-preview').classList.toggle('hidden', b.dataset.tab!=='preview');
-    $('#api-paid').classList.toggle('hidden', b.dataset.tab!=='paid');
-  });
-  async function scan(){
-    const wallet=$('#wallet').value.trim(), chain=$('#chain').value;
-    const res=$('#result'); res.classList.remove('hidden'); res.style.display='block';
-    $('#demo-status').textContent='scanning…';
-    res.innerHTML='<div class="text-slate-400 text-sm py-4"><i class="fa-solid fa-spinner fa-spin text-cyan"></i> Querying on-chain approvals…</div>';
-    try{
-      const r=await fetch(HOST+'/v1/approval-scan/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chain,wallet})});
-      const j=await r.json();
-      if(!r.ok){res.innerHTML='<div class="text-rose-400 text-sm">'+((j.error)||'Scan failed')+'</div>';$('#demo-status').textContent='error';return;}
-      render(j); $('#demo-status').textContent='done';
-    }catch(e){res.innerHTML='<div class="text-rose-400 text-sm">'+e.message+'</div>';$('#demo-status').textContent='error';}
-  }
-  function render(j){
-    const v=j.verdict||'REVIEW', score=j.safetyScore??0;
-    const g=$('#gauge'); g.style.setProperty('--v',score);
-    let cur=0; const t=setInterval(()=>{cur+=Math.ceil((score-cur)/6); if(cur>=score){cur=score;clearInterval(t);} $('#score').textContent=cur;},40);
-    const vb=$('#verdict'); vb.textContent=v; vb.className='verdict font-display font-bold text-2xl v-'+v;
-    $('#summary').textContent=j.summary||'';
-    $('#m-total').textContent=j.totalApprovals??0;
-    $('#m-unl').textContent=j.unlimitedApprovals??0;
-    $('#m-danger').textContent=j.dangerousApprovals??0;
-    let html='';
-    (j.approvals||[]).forEach(a=>{
-      html+='<div class="appr"><div><span class="font-mono text-white">'+(a.tokenSymbol||a.tokenAddress.slice(0,8))+'</span> → <span class="text-slate-400 font-mono">'+(a.riskTags&&a.riskTags[0]||a.spender.slice(0,10)+'…')+'</span></div>'+(a.isUnlimited?'<span class="unl">UNLIMITED</span>':'<span class="text-slate-500">limited</span>')+'</div>';
-    });
-    $('#approvals').innerHTML=html||'<div class="text-slate-500 text-sm py-2">No active approvals found for major spenders.</div>';
-    if(window.gsap) gsap.fromTo('#result',{opacity:0,y:14},{opacity:1,y:0,duration:.4});
-  }
-  $('#scan').onclick=scan;
-  $('#wallet').addEventListener('keydown',e=>{if(e.key==='Enter')scan();});
-</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/slim@3.8.1/tsparticles.slim.bundle.min.js"></script>
+    <script>
+        AOS.init({ duration: 700, once: true, offset: 80 });
+        if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+        if (window.tsParticles) {
+            tsParticles.load({
+                id: 'particles', options: {
+                    fpsLimit: 60, detectRetina: true, background: { color: 'transparent' },
+                    particles: {
+                        number: { value: 42, density: { enable: true, area: 900 } },
+                        color: { value: ['#22d3ee', '#34d399'] },
+                        links: { enable: true, color: '#22d3ee', opacity: .12, distance: 140 },
+                        move: { enable: true, speed: .5, outModes: 'out' },
+                        size: { value: { min: 1, max: 2.5 } }, opacity: { value: .4 }
+                    }
+                }
+            });
+        }
+        const $ = (s) => document.querySelector(s);
+        const HOST = location.origin;
+        document.querySelectorAll('[data-w]').forEach(a => a.onclick = e => { e.preventDefault(); $('#wallet').value = a.dataset.w; });
+        document.querySelectorAll('.api-tab').forEach(b => b.onclick = () => {
+            document.querySelectorAll('.api-tab').forEach(x => { x.classList.remove('on', 'text-white', 'border-cyan'); x.classList.add('text-slate-400'); });
+            b.classList.add('on', 'text-white', 'border-cyan'); b.classList.remove('text-slate-400');
+            $('#api-preview').classList.toggle('hidden', b.dataset.tab !== 'preview');
+            $('#api-paid').classList.toggle('hidden', b.dataset.tab !== 'paid');
+        });
+        async function scan() {
+            const wallet = $('#wallet').value.trim(), chain = $('#chain').value;
+            const res = $('#result'); res.classList.remove('hidden'); res.style.display = 'block';
+            $('#demo-status').textContent = 'scanning…';
+            res.innerHTML = '<div class="text-slate-400 text-sm py-4"><i class="fa-solid fa-spinner fa-spin text-cyan"></i> Querying on-chain approvals…</div>';
+            try {
+                const r = await fetch(HOST + '/v1/approval-scan/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chain, wallet }) });
+                const j = await r.json();
+                if (!r.ok) { res.innerHTML = '<div class="text-rose-400 text-sm">' + ((j.error) || 'Scan failed') + '</div>'; $('#demo-status').textContent = 'error'; return; }
+                render(j); $('#demo-status').textContent = 'done';
+            } catch (e) { res.innerHTML = '<div class="text-rose-400 text-sm">' + e.message + '</div>'; $('#demo-status').textContent = 'error'; }
+        }
+        function render(j) {
+            const v = j.verdict || 'REVIEW', score = j.safetyScore ?? 0;
+            const g = $('#gauge'); g.style.setProperty('--v', score);
+            let cur = 0; const t = setInterval(() => { cur += Math.ceil((score - cur) / 6); if (cur >= score) { cur = score; clearInterval(t); } $('#score').textContent = cur; }, 40);
+            const vb = $('#verdict'); vb.textContent = v; vb.className = 'verdict font-display font-bold text-2xl v-' + v;
+            $('#summary').textContent = j.summary || '';
+            $('#m-total').textContent = j.totalApprovals ?? 0;
+            $('#m-unl').textContent = j.unlimitedApprovals ?? 0;
+            $('#m-danger').textContent = j.dangerousApprovals ?? 0;
+            let html = '';
+            (j.approvals || []).forEach(a => {
+                html += '<div class="appr"><div><span class="font-mono text-white">' + (a.tokenSymbol || a.tokenAddress.slice(0, 8)) + '</span> → <span class="text-slate-400 font-mono">' + (a.riskTags && a.riskTags[0] || a.spender.slice(0, 10) + '…') + '</span></div>' + (a.isUnlimited ? '<span class="unl">UNLIMITED</span>' : '<span class="text-slate-500">limited</span>') + '</div>';
+            });
+            $('#approvals').innerHTML = html || '<div class="text-slate-500 text-sm py-2">No active approvals found for major spenders.</div>';
+            if (window.gsap) gsap.fromTo('#result', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .4 });
+        }
+        $('#scan').onclick = scan;
+        $('#wallet').addEventListener('keydown', e => { if (e.key === 'Enter') scan(); });
+    </script>
 </body>
+
 </html>

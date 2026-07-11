@@ -41,6 +41,9 @@ const usage = { previews: 0, paidCalls: 0, lastCaller: "" as string };
 
 const app = express();
 app.use(express.json());
+// Serve static assets (images, etc.) from /public so the landing page can
+// reference them via /assets/...
+app.use(express.static(`${process.cwd()}/public`));
 
 // Free discovery endpoints (no payment) so the marketplace can index us.
 app.get("/.well-known/agent.json", (req, res) => res.json(agentCard(req)));
