@@ -98,23 +98,26 @@ export interface RawSignals {
 }
 
 export async function gatherSignals(chain: string, wallet: string): Promise<RawSignals> {
-    if (!ethers.isAddress(wallet)) throw new Error(`Invalid wallet address: ${wallet}`);
+    // Normalize to lowercase so EIP-55 checksum mismatches (common in hand-
+    // typed / scraped addresses) don't reject a valid address.
+    const w = wallet.toLowerCase();
+    if (!ethers.isAddress(w)) throw new Error(`Invalid wallet address: ${wallet}`);
     if (!ETHERSCAN_CHAIN[chain] && !COVALENT_CHAIN[chain]) {
         throw new Error(`Unsupported chain: ${chain}.`);
     }
 
     // 1) Try Etherscan getApprovals if key present (tier-dependent).
     if (ETHERSCAN_KEY && ETHERSCAN_CHAIN[chain] !== undefined) {
-        const r = await fetchEtherscanApprovals(chain, wallet);
+        const r = await fetchEtherscanApprovals(chain, w);
         if (r.approvals.length > 0) return r;
     }
     // 2) Try Covalent if key present.
     if (COVALENT_KEY && COVALENT_CHAIN[chain]) {
-        const r = await fetchCovalent(chain, wallet);
+        const r = await fetchCovalent(chain, w);
         if (r.approvals.length > 0) return r;
     }
     // 3) Working free fallback: tokentx + allowance eth_call.
-    return await fetchViaTokenTx(chain, wallet);
+    return await fetchViaTokenTx(chain, w);
 }
 
 async function fetchEtherscanApprovals(chain: string, wallet: string): Promise<RawSignals> {
