@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Approval Guardian — Wallet Approval Auditor</title>
+    <meta name="description"
+        content="Pay-per-call wallet approval-exposure auditor. Scans ERC-20 approvals for unlimited allowances, unverified spenders, and flagged contracts. A2MCP agent on OKX.AI." />
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #070b16;
+            --bg2: #0b1224;
+            --panel: #0e1730;
+            --panel2: #111c3a;
+            --line: #1d2a4d;
+            --line2: #27375f;
+            --txt: #e8eefc;
+            --muted: #93a3c9;
+            --faint: #5e6f97;
+            --accent: #22d3ee;
+            --accent2: #34d399;
+            --accent-soft: rgba(34, 211, 238, .12);
+            --danger: #fb7185;
+            --warn: #fbbf24;
+            --safe: #34d399;
+            --radius: 18px;
+            --maxw: 1080px;
+            --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font);
+            background:
+                radial-gradient(1200px 600px at 80% -10%, rgba(34, 211, 238, .10), transparent 60%),
+                radial-gradient(900px 500px at 0% 10%, rgba(52, 211, 153, .08), transparent 55%),
+                var(--bg);
+            color: var(--txt);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none
+        }
+
+        .wrap {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding: 0 24px
+        }
+
+        .mono {
+            font-family: var(--mono)
+        }
+
+        /* nav */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(12px);
+            background: rgba(7, 11, 22, .72);
+            border-bottom: 1px solid var(--line)
+        }
+
+        .nav-in {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            font-weight: 700;
+            letter-spacing: -.01em
+        }
+
+        .logo {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #04121a;
+            font-weight: 800;
+            font-size: 15px
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 26px;
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        .nav-links a:hover {
+            color: var(--txt)
+        }
+
+        .pill {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            border: 1px solid var(--line2);
+            padding: 5px 11px;
+            border-radius: 999px;
+            background: var(--accent-soft)
+        }
+
+        /* hero */
+        header {
+            padding: 72px 0 40px
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--accent);
+            border: 1px solid var(--line2);
+            background: var(--accent-soft);
+            padding: 6px 13px;
+            border-radius: 999px
+        }
+
+        h1 {
+            font-size: clamp(34px, 5.4vw, 58px);
+            line-height: 1.04;
+            margin: 20px 0 14px;
+            letter-spacing: -.025em;
+            font-weight: 800
+        }
+
+        h1 .grad {
+            background: linear-gradient(120deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent
+        }
+
+        .lede {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 640px;
+            margin: 0 0 28px
+        }
+
+        .cta-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            font-weight: 600;
+            font-size: 15px;
+            padding: 13px 22px;
+            border-radius: 12px;
+            transition: .18s;
+            border: 1px solid transparent;
+            cursor: pointer
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #04121a
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(34, 211, 238, .25)
+        }
+
+        .btn-ghost {
+            border-color: var(--line2);
+            color: var(--txt);
+            background: var(--panel)
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--accent);
+            color: var(--accent)
+        }
+
+        /* demo */
+        .demo {
+            margin: 46px 0 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, var(--panel), var(--bg2));
+            overflow: hidden
+        }
+
+        .demo-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--line);
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent)
+        }
+
+        .demo-body {
+            padding: 22px
+        }
+
+        .field {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        input,
+        select {
+            font-family: var(--mono);
+            font-size: 14px;
+            background: var(--bg);
+            color: var(--txt);
+            border: 1px solid var(--line2);
+            border-radius: 11px;
+            padding: 13px 15px;
+            outline: none;
+            transition: .15s
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft)
+        }
+
+        #wallet {
+            flex: 1;
+            min-width: 280px
+        }
+
+        .hint {
+            font-size: 12.5px;
+            color: var(--faint);
+            margin-top: 9px
+        }
+
+        .run {
+            margin-top: 16px
+        }
+
+        .result {
+            margin-top: 20px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--bg);
+            padding: 20px;
+            display: none
+        }
+
+        .result.show {
+            display: block;
+            animation: fade .35s ease
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            flex-wrap: wrap
+        }
+
+        .gauge {
+            --v: 0;
+            width: 104px;
+            height: 104px;
+            border-radius: 50%;
+            flex: none;
+            position: relative;
+            background: conic-gradient(var(--accent) calc(var(--v)*1%), var(--line) 0);
+            display: grid;
+            place-items: center
+        }
+
+        .gauge::after {
+            content: "";
+            position: absolute;
+            inset: 9px;
+            border-radius: 50%;
+            background: var(--bg)
+        }
+
+        .gauge b {
+            position: relative;
+            font-size: 30px;
+            font-weight: 800;
+            font-family: var(--mono)
+        }
+
+        .verdict {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.01em
+        }
+
+        .v-SAFE {
+            color: var(--safe)
+        }
+
+        .v-REVIEW {
+            color: var(--warn)
+        }
+
+        .v-AT_RISK {
+            color: var(--warn)
+        }
+
+        .v-CRITICAL {
+            color: var(--danger)
+        }
+
+        .meta {
+            display: flex;
+            gap: 26px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line)
+        }
+
+        .meta div span {
+            display: block;
+            font-size: 12px;
+            color: var(--faint);
+            text-transform: uppercase;
+            letter-spacing: .05em
+        }
+
+        .meta div b {
+            font-size: 20px;
+            font-family: var(--mono)
+        }
+
+        .approvals {
+            margin-top: 16px;
+            display: grid;
+            gap: 10px
+        }
+
+        .appr {
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            padding: 12px 14px;
+            background: var(--panel);
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            font-size: 13.5px
+        }
+
+        .appr .sp {
+            color: var(--muted)
+        }
+
+        .appr .unl {
+            color: var(--warn);
+            font-weight: 700
+        }
+
+        .err {
+            color: var(--danger);
+            font-size: 14px
+        }
+
+        .loading {
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        /* sections */
+        section {
+            padding: 54px 0
+        }
+
+        .sec-h {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px
+        }
+
+        h2 {
+            font-size: clamp(26px, 3.4vw, 38px);
+            margin: 0 0 14px;
+            letter-spacing: -.02em;
+            font-weight: 800
+        }
+
+        .sec-lede {
+            color: var(--muted);
+            max-width: 620px;
+            font-size: 16.5px
+        }
+
+        .grid {
+            display: grid;
+            gap: 18px;
+            margin-top: 34px
+        }
+
+        .g3 {
+            grid-template-columns: repeat(3, 1fr)
+        }
+
+        .g2 {
+            grid-template-columns: repeat(2, 1fr)
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+            background: linear-gradient(180deg, var(--panel), var(--bg2));
+            transition: .2s
+        }
+
+        .card:hover {
+            border-color: var(--line2);
+            transform: translateY(-3px)
+        }
+
+        .card .ic {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            font-size: 20px;
+            background: var(--accent-soft);
+            border: 1px solid var(--line2);
+            margin-bottom: 14px
+        }
+
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            letter-spacing: -.01em
+        }
+
+        .card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14.5px
+        }
+
+        /* how it works */
+        .steps {
+            counter-reset: s;
+            display: grid;
+            gap: 16px;
+            margin-top: 30px
+        }
+
+        .step {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px 22px;
+            background: var(--panel);
+            display: flex;
+            gap: 16px;
+            align-items: flex-start
+        }
+
+        .step::before {
+            counter-increment: s;
+            content: counter(s);
+            font-family: var(--mono);
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--line2);
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+            flex: none
+        }
+
+        .step h4 {
+            margin: 4px 0 5px;
+            font-size: 16px
+        }
+
+        .step p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        /* api */
+        .api {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--bg);
+            overflow: hidden;
+            margin-top: 30px
+        }
+
+        .api pre {
+            margin: 0;
+            padding: 20px;
+            font-family: var(--mono);
+            font-size: 13.5px;
+            color: #cdd9f5;
+            overflow: auto;
+            line-height: 1.7
+        }
+
+        .api .c {
+            color: var(--faint)
+        }
+
+        .api .k {
+            color: var(--accent)
+        }
+
+        .api .s {
+            color: var(--accent2)
+        }
+
+        .api-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .api-tabs button {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 13px 18px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent
+        }
+
+        .api-tabs button.on {
+            color: var(--txt);
+            border-color: var(--accent)
+        }
+
+        /* footer */
+        footer {
+            border-top: 1px solid var(--line);
+            padding: 40px 0;
+            color: var(--faint);
+            font-size: 13.5px;
+            margin-top: 30px
+        }
+
+        .foot-in {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: center
+        }
+
+        .disc {
+            max-width: 560px;
+            line-height: 1.5
+        }
+
+        .suite {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .suite a {
+            border: 1px solid var(--line2);
+            border-radius: 999px;
+            padding: 7px 14px;
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .suite a:hover {
+            color: var(--accent);
+            border-color: var(--accent)
+        }
+
+        @media(max-width:820px) {
+
+            .g3,
+            .g2 {
+                grid-template-columns: 1fr
+            }
+
+            .nav-links {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="wrap nav-in">
+            <a class="brand" href="#"><span class="logo">AG</span> Approval Guardian</a>
+            <div class="nav-links">
+                <a href="#demo">Live Scan</a>
+                <a href="#how">How it works</a>
+                <a href="#api">API</a>
+                <a href="#suite">The Suite</a>
+            </div>
+            <span class="pill">A2MCP · OKX.AI</span>
+        </div>
+    </nav>
+
+    <header>
+        <div class="wrap">
+            <span class="tag">● Wallet Approval Auditor · x402 pay-per-call</span>
+            <h1>Is your wallet's <span class="grad">approval exposure</span> safe right now?</h1>
+            <p class="lede">Approval Guardian scans a wallet's ERC-20 approvals for <b>unlimited allowances</b>,
+                unverified spenders, and flagged contracts — returning a 0–100 safety score with a SAFE / REVIEW /
+                AT_RISK / CRITICAL verdict and per-approval evidence. Built for copilots and wallets to call on every
+                session connect.</p>
+            <div class="cta-row">
+                <a class="btn btn-primary" href="#demo">▶ Try a live scan</a>
+                <a class="btn btn-ghost" href="#api">View API</a>
+            </div>
+
+            <div class="demo" id="demo">
+                <div class="demo-head"><span><span class="dot"></span> &nbsp;Live preview — free, no wallet
+                        connect</span><span class="mono" id="demo-status">ready</span></div>
+                <div class="demo-body">
+                    <div class="field">
+                        <input id="wallet" class="mono" placeholder="0x… wallet address"
+                            value="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" />
+                        <select id="chain">
+                            <option value="ethereum">Ethereum</option>
+                            <option value="bsc">BNB Chain</option>
+                            <option value="base">Base</option>
+                            <option value="arbitrum">Arbitrum</option>
+                            <option value="polygon">Polygon</option>
+                            <option value="xlayer">X Layer</option>
+                        </select>
+                        <button class="btn btn-primary" id="scan">Scan</button>
+                    </div>
+                    <div class="hint">Try a known wallet: <a href="#"
+                            data-w="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">vitalik.eth</a> · <a href="#"
+                            data-w="0x28C6c06298d514Db089934071355E5743bf21d60">punk6529</a> · <a href="#"
+                            data-w="0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B">beeple</a></div>
+
+                    <div class="result" id="result">
+                        <div class="score-row">
+                            <div class="gauge" id="gauge"><b id="score">–</b></div>
+                            <div>
+                                <div class="verdict" id="verdict">–</div>
+                                <div class="mono" id="summary" style="color:var(--muted);font-size:14px;margin-top:4px">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="meta">
+                            <div><span>Total approvals</span><b id="m-total">–</b></div>
+                            <div><span>Unlimited</span><b id="m-unl" style="color:var(--warn)">–</b></div>
+                            <div><span>Dangerous</span><b id="m-danger" style="color:var(--danger)">–</b></div>
+                        </div>
+                        <div class="approvals" id="approvals"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="why">
+        <div class="wrap">
+            <div class="sec-h">Why it matters</div>
+            <h2>Every approval is a standing permission to drain you</h2>
+            <p class="sec-lede">When you approve a dApp, you often grant <b>unlimited</b> spend rights. If that contract
+                is later exploited or is malicious, it can move every approved token — silently. Approval Guardian is
+                the per-session hygiene check.</p>
+            <div class="grid g3">
+                <div class="card">
+                    <div class="ic">🔓</div>
+                    <h3>Unlimited allowances</h3>
+                    <p>Flags approvals set to the max uint256 — the ones that let a compromised spender take everything.
+                    </p>
+                </div>
+                <div class="card">
+                    <div class="ic">🕵️</div>
+                    <h3>Unverified spenders</h3>
+                    <p>Surfaces approvals to contracts not on the trusted-protocol list so you can review before
+                        transacting.</p>
+                </div>
+                <div class="card">
+                    <div class="ic">🚨</div>
+                    <h3>Flagged & malicious</h3>
+                    <p>Cross-checks spenders against a curated list of known-exploited addresses and raises risk to
+                        CRITICAL.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how">
+        <div class="wrap">
+            <div class="sec-h">How it works</div>
+            <h2>One call. Real on-chain evidence.</h2>
+            <div class="steps">
+                <div class="step">
+                    <div>
+                        <h4>Discover tokens</h4>
+                        <p>Enumerates the ERC-20 tokens a wallet has actually interacted with via Etherscan's free API.
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div>
+                        <h4>Read live allowances</h4>
+                        <p>Reads the current <code class="mono">allowance(owner, spender)</code> for each major protocol
+                            via RPC — catching the dangerous unlimited approvals.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div>
+                        <h4>Score & verdict</h4>
+                        <p>Computes a 0–100 safety score, assigns SAFE / REVIEW / AT_RISK / CRITICAL, and returns
+                            per-approval evidence.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="api">
+        <div class="wrap">
+            <div class="sec-h">Developer API</div>
+            <h2>Drop-in for any copilot</h2>
+            <p class="sec-lede">A2MCP service on OKX.AI. Free preview for discovery; paid deep scan at $0.01 USDT on X
+                Layer (x402).</p>
+            <div class="api">
+                <div class="api-tabs">
+                    <button class="on" data-tab="preview">Free preview</button>
+                    <button data-tab="paid">Paid scan</button>
+                </div>
+                <pre id="api-preview"><span class="c"># Free — no payment</span>
+curl -X POST <span class="s">https://approval-guardian.onrender.com/v1/approval-scan/preview</span> \
+  -H <span class="s">'content-type: application/json'</span> \
+  -d <span class="s">'{"chain":"ethereum","wallet":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'</span></pre>
+                <pre id="api-paid" style="display:none"><span class="c"># Paid — $0.01 USDT via x402 (OKX marketplace handles payment)</span>
+curl -X POST <span class="s">https://approval-guardian.onrender.com/v1/approval-scan</span> \
+  -H <span class="s">'content-type: application/json'</span> \
+  -d <span class="s">'{"chain":"ethereum","wallet":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <section id="suite">
+        <div class="wrap">
+            <div class="sec-h">The On-Chain Risk Suite</div>
+            <h2>Two agents. Full coverage.</h2>
+            <p class="sec-lede">Approval Guardian is the post-connect half. Pair it with <b>Token Trust Score</b> for
+                the pre-trade half — together they cover the two questions every copilot must answer.</p>
+            <div class="grid g2">
+                <div class="card">
+                    <div class="ic">🛡️</div>
+                    <h3>Approval Guardian <span style="color:var(--accent)">#5003</span></h3>
+                    <p>"Is this wallet's existing approval exposure safe?" — approval hygiene, per session.</p>
+                </div>
+                <div class="card">
+                    <div class="ic">📊</div>
+                    <h3>Token Trust Score <span style="color:var(--accent)">#4945</span></h3>
+                    <p>"Is this token safe to buy?" — composite trust score before you trade.</p>
+                </div>
+            </div>
+            <div class="suite" style="margin-top:22px">
+                <a href="https://token-trust-score.onrender.com">↗ Token Trust Score site</a>
+                <a href="https://approval-guardian.onrender.com">↗ Approval Guardian site</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="wrap foot-in">
+            <div class="disc">Approval Guardian is an automated on-chain approval aggregator. Not financial advice.
+                Scores reflect public data at call time and may change — verify independently before revoking any
+                approval. Powered by Etherscan + Ankr RPC.</div>
+            <div class="suite"><span class="pill">x402 · USDT · X Layer</span></div>
+        </div>
+    </footer>
+
+    <script>
+        const $ = (s) => document.querySelector(s);
+        const HOST = location.origin;
+        document.querySelectorAll('[data-w]').forEach(a => a.onclick = e => {
+            e.preventDefault(); $('#wallet').value = a.dataset.w;
+        });
+        document.querySelectorAll('.api-tabs button').forEach(b => b.onclick = () => {
+            document.querySelectorAll('.api-tabs button').forEach(x => x.classList.remove('on'));
+            b.classList.add('on');
+            $('#api-preview').style.display = b.dataset.tab === 'preview' ? 'block' : 'none';
+            $('#api-paid').style.display = b.dataset.tab === 'paid' ? 'block' : 'none';
+        });
+
+        async function scan() {
+            const wallet = $('#wallet').value.trim();
+            const chain = $('#chain').value;
+            const res = $('#result'); res.classList.remove('show'); res.style.display = 'block';
+            $('#demo-status').textContent = 'scanning…';
+            res.innerHTML = '<div class="loading">Querying on-chain approvals…</div>';
+            try {
+                const r = await fetch(HOST + '/v1/approval-scan/preview', {
+                    method: 'POST', headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ chain, wallet })
+                });
+                const j = await r.json();
+                if (!r.ok) { res.innerHTML = '<div class="err">' + (j.error || 'Scan failed') + '</div>'; $('#demo-status').textContent = 'error'; return; }
+                render(j);
+                $('#demo-status').textContent = 'done';
+            } catch (e) { res.innerHTML = '<div class="err">' + e.message + '</div>'; $('#demo-status').textContent = 'error'; }
+        }
+
+        function render(j) {
+            const v = j.verdict || 'REVIEW';
+            const score = j.safetyScore ?? 0;
+            $('#gauge').style.setProperty('--v', score);
+            $('#score').textContent = score;
+            const vb = $('#verdict'); vb.textContent = v; vb.className = 'verdict v-' + v;
+            $('#summary').textContent = j.summary || '';
+            $('#m-total').textContent = j.totalApprovals ?? 0;
+            $('#m-unl').textContent = j.unlimitedApprovals ?? 0;
+            $('#m-danger').textContent = j.dangerousApprovals ?? 0;
+            let html = '';
+            (j.approvals || []).forEach(a => {
+                html += '<div class="appr"><div><span class="mono">' + (a.tokenSymbol || a.tokenAddress.slice(0, 8)) +
+                    '</span> → <span class="sp mono">' + (a.riskTags && a.riskTags[0] || a.spender.slice(0, 10) + '…') +
+                    '</span></div>' + (a.isUnlimited ? '<span class="unl">UNLIMITED</span>' : '<span class="sp">limited</span>') + '</div>';
+            });
+            $('#approvals').innerHTML = html || '<div class="sp" style="color:var(--faint);font-size:13px">No active approvals found for major spenders.</div>';
+            $('#result').classList.add('show');
+        }
+
+        $('#scan').onclick = scan;
+        $('#wallet').addEventListener('keydown', e => { if (e.key === 'Enter') scan(); });
+    </script>
+</body>
+
+</html>

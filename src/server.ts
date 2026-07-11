@@ -201,49 +201,9 @@ function agentCard(req?: express.Request) {
 }
 
 // Human-facing landing page so judges/visitors hitting the URL see a product,
-// not a 404. Keeps the service feeling like a real utility.
-app.get("/", (req, res) => {
-    res.type("html").send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Approval Guardian — A2MCP</title>
-<style>
-  :root{color-scheme:dark}
-  body{margin:0;font:16px/1.6 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1020;color:#e6edf3}
-  .wrap{max-width:760px;margin:0 auto;padding:48px 24px}
-  h1{font-size:30px;margin:0 0 8px}
-  .tag{color:#5eead4;font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:13px}
-  code{background:#161b2e;padding:2px 6px;border-radius:6px;font-size:14px}
-  pre{background:#161b2e;padding:16px;border-radius:10px;overflow:auto}
-  .card{border:1px solid #233;background:#0f1530;border-radius:14px;padding:20px;margin:18px 0}
-  a{color:#5eead4}
-</style></head>
-<body><div class="wrap">
-  <div class="tag">OKX.AI A2MCP · x402 pay-per-call</div>
-  <h1>Approval Guardian</h1>
-  <p>Wallet approval-exposure auditor. Scans ERC-20 approvals for
-  <code>UNLIMITED</code> allowances, unverified spenders, and flagged/malicious
-  contracts — returning a composite 0–100 safety score with a structured
-  <code>SAFE / REVIEW / AT_RISK / CRITICAL</code> verdict and per-approval evidence.
-  Built for copilots and wallets to call on every session connect.</p>
-  <div class="card">
-    <strong>Free preview</strong>
-    <pre>curl -X POST https://${req.headers.host}/v1/approval-scan/preview \\
-  -H 'content-type: application/json' \\
-  -d '{"chain":"ethereum","wallet":"0x28C6c06298d514Db089934071355E5743bf21d60"}'</pre>
-  </div>
-  <div class="card">
-    <strong>Paid deep scan — $0.01 USDT on X Layer (x402)</strong>
-    <pre>curl -X POST https://${req.headers.host}/v1/approval-scan \\
-  -H 'content-type: application/json' \\
-  -d '{"chain":"ethereum","wallet":"0x28C6c06298d514Db089934071355E5743bf21d60"}'</pre>
-  </div>
-  <p>Endpoints: <code>GET /health</code> · <code>GET /metrics</code> ·
-  <code>GET /.well-known/agent.json</code> · <code>POST /v1/approval-scan/preview</code> ·
-  <code>POST /v1/approval-scan</code></p>
-  <p>Signals: GoPlus Labs approval_security + curated spender reputation.
-  Not financial advice.</p>
-</div></body></html>`);
+// not a 404. Serves the premium interactive page from /public.
+app.get("/", (_req, res) => {
+    res.sendFile("index.html", { root: `${process.cwd()}/public` });
 });
 
 app.listen(PORT, () => {
