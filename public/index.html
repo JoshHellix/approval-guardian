@@ -392,22 +392,28 @@
                         class="fa-solid fa-shield-halved"></i> Scan wallet</button>
 
                 <div id="result" class="mt-5 hidden">
-                    <div class="flex items-center gap-6">
-                        <div class="gauge" id="gauge"><b id="score">–</b></div>
-                        <div>
-                            <div class="verdict font-display font-bold text-2xl" id="verdict">–</div>
-                            <div class="font-mono text-sm text-slate-400 mt-1" id="summary"></div>
+                    <div id="result-loading" class="hidden py-6">
+                        <div class="text-slate-400 text-sm flex items-center gap-2"><i
+                                class="fa-solid fa-spinner fa-spin text-cyan"></i> Querying on-chain approvals…</div>
+                    </div>
+                    <div id="result-body">
+                        <div class="flex items-center gap-6">
+                            <div class="gauge" id="gauge"><b id="score">–</b></div>
+                            <div>
+                                <div class="verdict font-display font-bold text-2xl" id="verdict">–</div>
+                                <div class="font-mono text-sm text-slate-400 mt-1" id="summary"></div>
+                            </div>
                         </div>
+                        <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-line">
+                            <div><span class="block text-xs uppercase tracking-wide text-slate-500">Total</span><b
+                                    id="m-total" class="font-mono text-xl">–</b></div>
+                            <div><span class="block text-xs uppercase tracking-wide text-slate-500">Unlimited</span><b
+                                    id="m-unl" class="font-mono text-xl text-amber-400">–</b></div>
+                            <div><span class="block text-xs uppercase tracking-wide text-slate-500">Dangerous</span><b
+                                    id="m-danger" class="font-mono text-xl text-rose-400">–</b></div>
+                        </div>
+                        <div class="approvals mt-4 grid gap-2.5" id="approvals"></div>
                     </div>
-                    <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-line">
-                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Total</span><b
-                                id="m-total" class="font-mono text-xl">–</b></div>
-                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Unlimited</span><b
-                                id="m-unl" class="font-mono text-xl text-amber-400">–</b></div>
-                        <div><span class="block text-xs uppercase tracking-wide text-slate-500">Dangerous</span><b
-                                id="m-danger" class="font-mono text-xl text-rose-400">–</b></div>
-                    </div>
-                    <div class="approvals mt-4 grid gap-2.5" id="approvals"></div>
                 </div>
             </div>
         </div>
@@ -612,29 +618,33 @@ curl -X POST <span class="text-mint">https://approval-guardian.onrender.com/v1/a
         async function scan() {
             const wallet = $('#wallet').value.trim(), chain = $('#chain').value;
             const res = $('#result'); res.classList.remove('hidden'); res.style.display = 'block';
+            $('#result-loading').classList.remove('hidden');
+            $('#result-body').classList.add('hidden');
             $('#demo-status').textContent = 'scanning…';
-            res.innerHTML = '<div class="text-slate-400 text-sm py-4"><i class="fa-solid fa-spinner fa-spin text-cyan"></i> Querying on-chain approvals…</div>';
             try {
                 const r = await fetch(HOST + '/v1/approval-scan/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chain, wallet }) });
                 const j = await r.json();
-                if (!r.ok) { res.innerHTML = '<div class="text-rose-400 text-sm">' + ((j.error) || 'Scan failed') + '</div>'; $('#demo-status').textContent = 'error'; return; }
+                $('#result-loading').classList.add('hidden');
+                $('#result-body').classList.remove('hidden');
+                if (!r.ok) { $('#result-body').innerHTML = '<div class="text-rose-400 text-sm">' + ((j.error) || 'Scan failed') + '</div>'; $('#demo-status').textContent = 'error'; return; }
                 render(j); $('#demo-status').textContent = 'done';
-            } catch (e) { res.innerHTML = '<div class="text-rose-400 text-sm">' + e.message + '</div>'; $('#demo-status').textContent = 'error'; }
+            } catch (e) { $('#result-loading').classList.add('hidden'); $('#result-body').classList.remove('hidden'); $('#result-body').innerHTML = '<div class="text-rose-400 text-sm">' + (e && e.stack ? e.stack : e.message) + '</div>'; $('#demo-status').textContent = 'error'; }
         }
         function render(j) {
             const v = j.verdict || 'REVIEW', score = j.safetyScore ?? 0;
-            const g = $('#gauge'); g.style.setProperty('--v', score);
-            let cur = 0; const t = setInterval(() => { cur += Math.ceil((score - cur) / 6); if (cur >= score) { cur = score; clearInterval(t); } $('#score').textContent = cur; }, 40);
-            const vb = $('#verdict'); vb.textContent = v; vb.className = 'verdict font-display font-bold text-2xl v-' + v;
-            $('#summary').textContent = j.summary || '';
-            $('#m-total').textContent = j.totalApprovals ?? 0;
-            $('#m-unl').textContent = j.unlimitedApprovals ?? 0;
-            $('#m-danger').textContent = j.dangerousApprovals ?? 0;
+            const g = $('#gauge'); if (!g) return;
+            g.style.setProperty('--v', score);
+            let cur = 0; const t = setInterval(() => { cur += Math.ceil((score - cur) / 6); if (cur >= score) { cur = score; clearInterval(t); } const sc = $('#score'); if (sc) sc.textContent = cur; }, 40);
+            const vb = $('#verdict'); if (vb) { vb.textContent = v; vb.className = 'verdict font-display font-bold text-2xl v-' + v; }
+            const sum = $('#summary'); if (sum) sum.textContent = j.summary || '';
+            const mt = $('#m-total'); if (mt) mt.textContent = j.totalApprovals ?? 0;
+            const mu = $('#m-unl'); if (mu) mu.textContent = j.unlimitedApprovals ?? 0;
+            const md = $('#m-danger'); if (md) md.textContent = j.dangerousApprovals ?? 0;
             let html = '';
             (j.approvals || []).forEach(a => {
-                html += '<div class="appr"><div><span class="font-mono text-white">' + (a.tokenSymbol || a.tokenAddress.slice(0, 8)) + '</span> → <span class="text-slate-400 font-mono">' + (a.riskTags && a.riskTags[0] || a.spender.slice(0, 10) + '…') + '</span></div>' + (a.isUnlimited ? '<span class="unl">UNLIMITED</span>' : '<span class="text-slate-500">limited</span>') + '</div>';
+                html += '<div class="appr"><div><span class="font-mono text-white">' + (a.tokenSymbol || (a.tokenAddress || '').slice(0, 8)) + '</span> → <span class="text-slate-400 font-mono">' + (a.riskTags && a.riskTags[0] || (a.spender || '').slice(0, 10) + '…') + '</span></div>' + (a.isUnlimited ? '<span class="unl">UNLIMITED</span>' : '<span class="text-slate-500">limited</span>') + '</div>';
             });
-            $('#approvals').innerHTML = html || '<div class="text-slate-500 text-sm py-2">No active approvals found for major spenders.</div>';
+            const ap = $('#approvals'); if (ap) ap.innerHTML = html || '<div class="text-slate-500 text-sm py-2">No active approvals found for major spenders.</div>';
             if (window.gsap) gsap.fromTo('#result', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .4 });
         }
         $('#scan').onclick = scan;

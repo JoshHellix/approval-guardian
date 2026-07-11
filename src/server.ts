@@ -134,6 +134,7 @@ app.post("/v1/approval-scan/preview", async (req, res) => {
             totalApprovals: result.totalApprovals,
             unlimitedApprovals: result.unlimitedApprovals,
             dangerousApprovals: result.dangerousApprovals,
+            approvals: result.approvals,
             upgrade: {
                 endpoint: "/v1/approval-scan",
                 price: `${PRICE_USD} USDT`,
